@@ -1,5 +1,6 @@
 # django rest api
 from rest_framework import viewsets, mixins
+from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
 
 # local modules
@@ -21,10 +22,23 @@ class OrderViewSet(mixins.ListModelMixin,
     search_fields = ['user']
 
     def get_queryset(self):
-        start_date = self.kwargs.get('start', None)
-        end_date = self.kwargs.get('end', None)
-        queryset = Order.objects.all()
-        if start_date or end_date:
-            queryset = Order.objects.filter(date__range=[start_date, end_date])
+        """
+        주어진 날짜 범위에 속하거나 결제, 배송 상태에 따른 필터링
+        query_params : start, end, pay_state, delivery_state
+        """
+        queryset = self.queryset
+        params = self.request.query_params
+        if params.get('start'):
+            queryset = queryset.filter(date__gte=params.get('start'))
+
+        if params.get('end'):
+            queryset = queryset.filter(date__lte=params.get('end'))
+
+        if params.get('pay_state'):
+            queryset = queryset.filter(pay_state=params.get('pay_state'))
+
+        if params.get('delivery_state'):
+            queryset = queryset.filter(delivery_state=params.get('delivery_state'))
 
         return queryset
+
