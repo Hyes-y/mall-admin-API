@@ -2,7 +2,7 @@
 from rest_framework import viewsets, mixins
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
-
+from rest_framework.permissions import IsAdminUser
 # local modules
 from .models import Order
 from .serializers import OrderSerializer
@@ -17,6 +17,8 @@ class OrderViewSet(mixins.ListModelMixin,
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    # permission_classes = [IsAdminUser]
+
     # 검색 기능
     filter_backends = [SearchFilter]
     search_fields = ['user']
