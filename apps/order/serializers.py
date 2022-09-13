@@ -4,6 +4,7 @@ from .models import Order, Coupon
 
 
 class OrderSerializer(ModelSerializer):
+    """ 주문 내역 조회, 수정 시리얼라이저 """
     class Meta:
         model = Order
         fields = '__all__'
