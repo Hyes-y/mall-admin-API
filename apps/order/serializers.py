@@ -1,7 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 from rest_framework.serializers import ValidationError
 from .models import Order, Coupon
-from .fixtures.load_data import load_json
 
 
 class OrderSerializer(ModelSerializer):

@@ -31,8 +31,9 @@ class CouponType(models.Model):
     code = models.CharField(verbose_name='쿠폰 코드', max_length=20, null=True)
     is_active = models.BooleanField(verbose_name='활성화', default=True)
 
-    def __str__(self):
-        return f'{self.description}  유효기간: ~ {self.end_date}'
+    # def __str__(self):
+    #     # return f'{self.description}  유효기간: ~ {self.end_date}'
+    #     return f'{id}'
 
 
 class Coupon(models.Model):
