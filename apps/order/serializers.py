@@ -84,7 +84,7 @@ class OrderTestSerializer(serializers.ModelSerializer):
                         is_used=False,
                         expired_date__gte=get_current_date())
 
-        if len(coupon) == 0 or price < coupon[0].type.min_price:
+        if len(coupon) == 0 or payment_amount < coupon[0].type.min_price:
             raise ValidationError("ERROR: 유효하지 않은 쿠폰입니다.")
 
         coupon = coupon[0]
