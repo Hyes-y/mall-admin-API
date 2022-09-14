@@ -31,10 +31,6 @@ class CouponType(models.Model):
     code = models.CharField(verbose_name='쿠폰 코드', max_length=20, null=True)
     is_active = models.BooleanField(verbose_name='활성화', default=True)
 
-    # def __str__(self):
-    #     # return f'{self.description}  유효기간: ~ {self.end_date}'
-    #     return f'{id}'
-
 
 class Coupon(models.Model):
     """
@@ -45,7 +41,7 @@ class Coupon(models.Model):
     expired_date = models.DateField(verbose_name='만료 날짜')
     is_used = models.BooleanField(verbose_name='사용 여부', default=False)
     date = models.DateTimeField(verbose_name='사용 날짜', null=True)
-    sale_amount = models.DecimalField(verbose_name='할인금액', max_digits=10, decimal_places=2, null=True)
+    sale_amount = models.DecimalField(verbose_name='할인 금액', max_digits=10, decimal_places=2, null=True)
     owner = models.PositiveIntegerField(verbose_name='소유자', blank=True, null=True)  # 주어진 데이터 사용을 위해 외래키 연결 x
     code = models.CharField(verbose_name='발급 코드', max_length=20)
     is_expired = models.BooleanField(verbose_name='만료 여부', default=False)

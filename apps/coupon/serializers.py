@@ -12,6 +12,13 @@ class CouponTypeSerializer(ModelSerializer):
         read_only_fields = ['id']
 
     def validate(self, data):
+        """
+        쿠폰 타입 생성 및 수정 시 데이터 검증
+        1) start_date <= end_date
+        2) period < 0
+        3) types in valid range
+        4) 사용자 발급의 경우 수량, 쿠폰 코드 반드시 지정
+        """
         start_date = data.get('start_date', None)
         end_date = data.get('end_date', None)
         period = data.get('period', None)
@@ -47,10 +54,13 @@ class CouponSerializer(ModelSerializer):
 
     def create(self, validated_data):
         coupon_type = validated_data.get('type', None)
+
         if not coupon_type:
             raise ValidationError("ERROR: 올바르지 않은 입력값입니다.")
+
         coupon_type_obj = CouponType.objects.get(id=coupon_type.id)
 
+        # 쿠폰 타입이 유효하지 않음 (비활성화 되어있거나 유효 기간이 지난 경우)
         if not (coupon_type_obj.is_active and
                 coupon_type_obj.end_date.strftime('%Y-%m-%d') >= get_current_date()):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
@@ -59,15 +69,18 @@ class CouponSerializer(ModelSerializer):
         if coupon_type_obj.iss_type == 1:
             owner = self.request.user
             code = coupon_type_obj.code
+
             if len(Coupon.objects.filter(
                     owner=owner,
                     code=code,
                     type=coupon_type
             )) >= 1:
                 raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
+
         else:
             owner = validated_data.get('user', 1)
             code = code_generator(coupon_type)
+
         expired_date = add_period(get_current_date(), coupon_type_obj.period)
 
         return self.Meta.model.objects.create(
