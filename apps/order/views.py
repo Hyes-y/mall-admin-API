@@ -1,6 +1,5 @@
 # django rest api
 from rest_framework import viewsets, mixins
-from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser
 # local modules
@@ -13,13 +12,14 @@ class OrderViewSet(mixins.ListModelMixin,
                    mixins.UpdateModelMixin,
                    viewsets.GenericViewSet):
     """
-    주문 내역 조회, 수정 API
+    주문 내역 조회, 수정 Viewset
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    # 테스트를 위해 permission 주석 처리
     # permission_classes = [IsAdminUser]
 
-    # 검색 기능
+    # 주문자 검색 기능
     filter_backends = [SearchFilter]
     search_fields = ['user']
 
@@ -48,5 +48,6 @@ class OrderViewSet(mixins.ListModelMixin,
 class OrderTestViewSet(mixins.CreateModelMixin,
                        mixins.ListModelMixin,
                        viewsets.GenericViewSet):
+    """ 테스트를 위한 주문 내역 생성, 조회 Viewset """
     queryset = Order.objects.all()
     serializer_class = OrderTestSerializer

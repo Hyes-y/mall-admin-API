@@ -7,7 +7,7 @@ from apps.utils import get_current_date, get_dollar, get_delivery_cost
 
 class OrderSerializer(serializers.ModelSerializer):
     """
-    주문 내역 조회, 수정 시리얼라이저
+    주문 내역 조회, 수정, 삭제 시리얼라이저
     수정 가능 필드: 'pay_state', 'delivery_state'
     """
     class Meta:
@@ -31,6 +31,7 @@ class OrderSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """
         주문 내역 수정 함수
+        ! `결제 취소` 로 수정시 쿠폰 적용 리셋
         pay_state: 0(결제 취소), 1(결제 대기), 2(결제 완료)
         delivery_state: 0(배송 취소), 1(배송 준비중), 2(배송 중), 3(배송 완료)
         """
@@ -46,6 +47,7 @@ class OrderSerializer(serializers.ModelSerializer):
             coupon.sale_amount = None
             coupon.save()
 
+        # 수정 사항 반영
         instance.pay_state = pay_state
         instance.delivery_state = delivery_state
         instance.save()
@@ -60,23 +62,28 @@ class OrderTestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
-        # read_only_fields = ['id', 'date', 'updated_at', 'sale_price',
-        #                     'delivery_cost', 'payment_amount', 'pay_state',
-        #                     'delivery_state', 'delivery_num']
 
     def create(self, validated_data):
+        """ 주문 내역 생성시 쿠폰 반영 """
         user = validated_data.get('user', None)
         quantity = validated_data.get('quantity', None)
         price = validated_data.get('price', None)
         coupon_code = validated_data.get('coupon', None)
         buyr_country = validated_data.get('buyr_country', None)
 
+        # 결제 상태, 배송 상태 디폴트로 설정
         validated_data['pay_state'] = 1
         validated_data['delivery_state'] = 1
+
+        # 국가별, 개수별 배송비 가져오기
         delivery_cost = get_delivery_cost(buyr_country, quantity)
+
         payment_amount = price * quantity
+
+        # 할인한 금액
         dc_amount = 0
 
+        # 유효한 쿠폰인지 확인
         coupon = Coupon.objects.filter(
                         owner=user,
                         code=coupon_code,
@@ -89,15 +96,18 @@ class OrderTestSerializer(serializers.ModelSerializer):
 
         coupon = coupon[0]
 
+        # 쿠폰 적용 로직
+        # 1) 배송비 할인
         if coupon.type.dc_type == 0:
             dc_amount = delivery_cost
             delivery_cost = 0
+        # 2) 퍼센트 할인 (단, 할인 금액이 해당 쿠폰 타입의 최대 할인 금액 이상인 경우 최대 할인 금액만큼만 할인)
         elif coupon.type.dc_type == 1:
             if payment_amount * (coupon.type.value / 100) <= coupon.type.max_dc_price:
                 dc_amount = payment_amount * (coupon.type.value / 100)
             else:
                 dc_amount = coupon.type.max_dc_price
-
+        # 3) 정액 할인 (KRW 원화 기준, 국가가 KR이 아닌 경우 달러로 계산)
         elif coupon.type.dc_type == 2:
             if buyr_country == "KR":
                 dc_amount = coupon.type.value
