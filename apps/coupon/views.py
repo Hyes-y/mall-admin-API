@@ -1,10 +1,10 @@
 # django rest api
 from rest_framework import viewsets
-from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser
 # local modules
 from .models import Coupon, CouponType
 from .serializers import CouponSerializer, CouponTypeSerializer
+from .permissions import IsAdminOrCreateOnly
 
 
 class CouponTypeViewSet(viewsets.ModelViewSet):
@@ -14,4 +14,6 @@ class CouponTypeViewSet(viewsets.ModelViewSet):
 
 
 class CouponViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+    # permission_classes = [IsAdminOrCreateOnly]
