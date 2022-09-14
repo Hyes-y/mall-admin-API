@@ -1,7 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from rest_framework.serializers import ValidationError
 from .models import Coupon, CouponType
-from .utils import code_generator, get_current_date, add_period
+from apps.utils import code_generator, get_current_date, add_period
 
 
 class CouponTypeSerializer(ModelSerializer):

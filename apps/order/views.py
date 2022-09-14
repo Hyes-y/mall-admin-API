@@ -5,7 +5,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser
 # local modules
 from .models import Order
-from .serializers import OrderSerializer
+from .serializers import OrderSerializer, OrderTestSerializer
 
 
 class OrderViewSet(mixins.ListModelMixin,
@@ -44,3 +44,9 @@ class OrderViewSet(mixins.ListModelMixin,
 
         return queryset
 
+
+class OrderTestViewSet(mixins.CreateModelMixin,
+                       mixins.ListModelMixin,
+                       viewsets.GenericViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderTestSerializer
