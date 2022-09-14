@@ -61,7 +61,8 @@ CORS_ALLOW_HEADERS = (
 )
 
 LOCAL_APPS = [
-    # Add local apps
+    'apps.order.apps.OrderConfig',
+    'apps.coupon.apps.CouponConfig',
 ]
 
 DJANGO_APPS = [
@@ -159,3 +160,6 @@ USE_TZ = False
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 환율 정보
+ER_API_KEY = env('ER_API_KEY')
