@@ -52,16 +52,20 @@ class CouponSerializer(ModelSerializer):
                 coupon_type_obj.end_date < get_current_date()):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
 
-        # 수정 필요
-        # iss_type 1인 경우 사용자 발급이므로 owner 방식도 변경
-        code = coupon_type_obj.code \
-            if coupon_type_obj.iss_type == 1 else code_generator()
-
+        # iss_type 1인 경우 사용자 발급
+        if coupon_type_obj.iss_type == 1:
+            owner = self.request.user
+            code = coupon_type_obj.code
+            if len(Coupon.objects.filter(
+                    owner=owner,
+                    code=code,
+                    type=coupon_type
+            )) >= 1:
+                raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
+        else:
+            owner = validated_data.get('user', 1)
+            code = code_generator(coupon_type)
         expired_date = add_period(get_current_date(), coupon_type_obj.period)
-        # 로그인 유저용
-        # owner = self.request.user
-        # 테스트 용
-        owner = validated_data.get('user', 1)
 
         return self.model.objects.create(
                 type=coupon_type,

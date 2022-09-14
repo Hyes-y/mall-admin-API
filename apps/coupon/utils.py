@@ -1,6 +1,7 @@
 from random import seed
 from random import random
 from datetime import datetime, timedelta
+from .models import Coupon
 
 
 def code_generator(s):
@@ -9,8 +10,10 @@ def code_generator(s):
         value = str(random())[2:]
         if len(value) >= 12:
             value = value[:12]
-            break
-    return value
+            if len(Coupon.objects.filter(code=value)) == 0:
+                return value
+        else:
+            continue
 
 
 def get_current_date():
