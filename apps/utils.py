@@ -4,8 +4,11 @@ from random import random
 from datetime import datetime, timedelta
 from apps.coupon.models import Coupon
 from django.conf import settings
+from decimal import Decimal
+import requests
 import json
 import os
+
 
 with open(os.path.join(settings.BASE_DIR, 'apps', 'data', 'delivery_cost.json'), "r") as f:
     delivery_cost_data = json.load(f)
@@ -36,7 +39,33 @@ def add_period(issue_date, period):
 
 
 def get_dollar(krw):
-    return krw // 1200
+    file_path = os.path.join(settings.BASE_DIR,
+                             'apps',
+                             'data',
+                             'exchange_rate',
+                             f'{get_current_date()}.json')
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            file = json.load(f)
+            return krw / Decimal(file['USD'])
+    else:
+        url = 'https://www.koreaexim.go.kr/site/program/financial'
+        api = '/exchangeJSON'
+        params = {
+            'authkey': settings.ER_API_KEY,
+            'data': 'AP01',
+        }
+        response = requests.get(f'{url}{api}', params=params).json()
+        print(response)
+        for res in response:
+            if res['cur_unit'] == "USD":
+                exchange_rate = res['deal_bas_r'].replace(",", "")
+                data = {
+                    'USD': exchange_rate
+                }
+                with open(file_path, 'w') as wf:
+                    json.dump(data, wf)
+                return krw / Decimal(data['USD'])
 
 
 def get_delivery_cost(country, quantity):
