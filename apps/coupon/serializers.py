@@ -1,4 +1,5 @@
-from rest_framework.serializers import ModelSerializer
+from django.db.models import Sum
+from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from rest_framework.serializers import ValidationError
 from .models import Coupon, CouponType
 from apps.utils import code_generator, get_current_date, add_period
@@ -97,3 +98,24 @@ class CouponSerializer(ModelSerializer):
                 owner=owner,
                 code=code,
             )
+
+
+class CouponStatisticsSerializer(ModelSerializer):
+    coupons = CouponSerializer(many=True, read_only=True)
+    total_sale = SerializerMethodField()
+    use_counts = SerializerMethodField()
+    issue_counts = SerializerMethodField()
+
+    class Meta:
+        model = CouponType
+        fields = ('id', 'description', 'coupons', 'total_sale', 'use_counts', 'issue_counts')
+
+    def get_total_sale(self, obj):
+        total_sale = Coupon.objects.filter(type=obj.id, is_used=True).aggregate(Sum('sale_amount'))
+        return total_sale['sale_amount__sum']
+
+    def get_use_counts(self, obj):
+        return Coupon.objects.filter(type=obj.id, is_used=True).count()
+
+    def get_issue_counts(self, obj):
+        return Coupon.objects.filter(type=obj.id).count()
