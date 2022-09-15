@@ -129,7 +129,6 @@ class OrderTestSerializer(serializers.ModelSerializer):
         validated_data['sale_price'] = sale_price / exchange_rate
         validated_data['payment_amount'] = payment_amount / exchange_rate
 
-        print(sale_price)
         try:
             order = self.Meta.model.objects.create(**validated_data)
         except:

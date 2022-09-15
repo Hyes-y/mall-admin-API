@@ -97,8 +97,8 @@ class CouponSerializer(ModelSerializer):
 
         # 기간(period)이 있는 경우 현재 날짜에서 그만큼 더한 날짜를 만료 날짜로 지정
         # 없는 경우 쿠폰 타입의 end_date를 만료 날짜로 지정
-        expired_date = add_period(get_current_date(), coupon_type_obj.period) \
-            if coupon_type_obj.period else coupon_type_obj.end_date
+        expired_date = add_period(get_current_date(), coupon_type_obj.period)
+            # if coupon_type_obj.period else coupon_type_obj.end_date
 
         return self.Meta.model.objects.create(
                 type=coupon_type,
