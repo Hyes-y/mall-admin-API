@@ -19,6 +19,7 @@ class CouponTypeSerializer(ModelSerializer):
         2) period < 0
         3) types in valid range
         4) 사용자 발급의 경우 수량, 쿠폰 코드 반드시 지정
+        5) 퍼센트 할인의 경우 100 초과 값은 불가능
         """
         start_date = data.get('start_date', None)
         end_date = data.get('end_date', None)
@@ -27,6 +28,7 @@ class CouponTypeSerializer(ModelSerializer):
         iss_type = data.get('iss_type', None)
         amount = data.get('amount', None)
         code = data.get('code', None)
+        value = data.get('value', None)
 
         if start_date > end_date:
             raise ValidationError("ERROR: 유효 기간이 올바르지 않습니다.")
@@ -42,6 +44,9 @@ class CouponTypeSerializer(ModelSerializer):
                 raise ValidationError("ERROR: 사용자 발급의 경우 수량과 쿠폰 코드를 지정해주세요.")
             if len(CouponType.objects.filter(is_active=True, code=code)) > 0:
                 raise ValidationError("ERROR: 동일한 쿠폰 코드가 존재합니다. 다시 지정해주세요.")
+
+        if dc_type == 1 and value > 100:
+            raise ValidationError("ERROR: 퍼센트 할인은 100 초과 값을 입력할 수 없습니다.")
 
         return data
 
@@ -90,7 +95,10 @@ class CouponSerializer(ModelSerializer):
             owner = validated_data.get('user', 1)
             code = code_generator(coupon_type)
 
-        expired_date = add_period(get_current_date(), coupon_type_obj.period)
+        # 기간(period)이 있는 경우 현재 날짜에서 그만큼 더한 날짜를 만료 날짜로 지정
+        # 없는 경우 쿠폰 타입의 end_date를 만료 날짜로 지정
+        expired_date = add_period(get_current_date(), coupon_type_obj.period) \
+            if coupon_type_obj.period else coupon_type_obj.end_date
 
         return self.Meta.model.objects.create(
                 type=coupon_type,
