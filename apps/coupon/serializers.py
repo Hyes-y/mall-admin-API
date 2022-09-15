@@ -62,7 +62,7 @@ class CouponSerializer(ModelSerializer):
 
         # 쿠폰 타입이 유효하지 않음 (비활성화 되어있거나 유효 기간이 지난 경우)
         if not (coupon_type_obj.is_active and
-                coupon_type_obj.end_date.strftime('%Y-%m-%d') >= get_current_date()):
+                coupon_type_obj.end_date.strftime('%Y-%m-%d %H:%M:%S') >= get_current_date()):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
 
         # iss_type 1인 경우 사용자 발급

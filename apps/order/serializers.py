@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 from .models import Order
 from apps.coupon.models import Coupon
-from apps.utils import get_current_date, get_dollar, get_delivery_cost
+from apps.utils import get_current_date, get_exchange_rate, get_delivery_cost
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -38,6 +38,11 @@ class OrderSerializer(serializers.ModelSerializer):
         pay_state = validated_data.get('pay_state', instance.pay_state)
         delivery_state = validated_data.get('delivery_state', instance.delivery_state)
 
+        # 수정 사항 반영
+        instance.pay_state = pay_state
+        instance.delivery_state = delivery_state
+        instance.save()
+
         # 결제 취소로 변경하는 경우 쿠폰 사용 초기화
         if pay_state == 0 and instance.coupon:
             coupon = Coupon.objects.get(owner=instance.user,
@@ -46,11 +51,6 @@ class OrderSerializer(serializers.ModelSerializer):
             coupon.date = None
             coupon.sale_amount = None
             coupon.save()
-
-        # 수정 사항 반영
-        instance.pay_state = pay_state
-        instance.delivery_state = delivery_state
-        instance.save()
 
         return instance
 
@@ -69,18 +69,26 @@ class OrderTestSerializer(serializers.ModelSerializer):
         quantity = validated_data.get('quantity', None)
         price = validated_data.get('price', None)
         coupon_code = validated_data.get('coupon', None)
-        buyr_country = validated_data.get('buyr_country', None)
+        country = validated_data.get('buyr_country', None)
 
         # 결제 상태, 배송 상태 디폴트로 설정
         validated_data['pay_state'] = 1
         validated_data['delivery_state'] = 1
 
         # 국가별, 개수별 배송비 가져오기
-        delivery_cost = get_delivery_cost(buyr_country, quantity)
+        delivery_cost = get_delivery_cost(country, quantity)
+
+        # 환율 정보(원화의 경우 1)
+        exchange_rate = 1
+
+        # 해외 주문의 경우 달러 가격 원화로 변경
+        if country != "KR":
+            exchange_rate = get_exchange_rate()
+            price *= exchange_rate
 
         payment_amount = price * quantity
 
-        # 할인한 금액
+        # 할인 금액
         dc_amount = 0
 
         # 유효한 쿠폰인지 확인
@@ -91,10 +99,13 @@ class OrderTestSerializer(serializers.ModelSerializer):
                         is_used=False,
                         expired_date__gte=get_current_date())
 
-        if len(coupon) == 0 or payment_amount < coupon[0].type.min_price:
+        if len(coupon) == 0:
             raise ValidationError("ERROR: 유효하지 않은 쿠폰입니다.")
 
         coupon = coupon[0]
+
+        if payment_amount < coupon.type.min_price:
+            raise ValidationError(f"ERROR: 주문 금액이 {coupon.type.min_price} 이상이어야 해당 쿠폰 사용이 가능합니다.")
 
         # 쿠폰 적용 로직
         # 1) 배송비 할인
@@ -107,19 +118,21 @@ class OrderTestSerializer(serializers.ModelSerializer):
                 dc_amount = payment_amount * (coupon.type.value / 100)
             else:
                 dc_amount = coupon.type.max_dc_price
-        # 3) 정액 할인 (KRW 원화 기준, 국가가 KR이 아닌 경우 달러로 계산)
+        # 3) 정액 할인 (KRW 원화 기준)
         elif coupon.type.dc_type == 2:
-            if buyr_country == "KR":
-                dc_amount = coupon.type.value
-            else:
-                dc_amount = get_dollar(coupon.type.value)
+            dc_amount = min(coupon.type.value, payment_amount)
 
         sale_price = payment_amount - dc_amount
         payment_amount = sale_price + delivery_cost
 
-        validated_data['delivery_cost'] = delivery_cost
-        validated_data['sale_price'] = sale_price
-        validated_data['payment_amount'] = payment_amount
+        validated_data['delivery_cost'] = delivery_cost * exchange_rate
+        validated_data['sale_price'] = sale_price * exchange_rate
+        validated_data['payment_amount'] = payment_amount * exchange_rate
+
+        try:
+            order = self.Meta.model.objects.create(**validated_data)
+        except:
+            raise ValidationError("ERROR: 유효하지 않은 주문입니다.")
 
         # 쿠폰 사용 처리
         coupon.is_used = True
@@ -127,6 +140,6 @@ class OrderTestSerializer(serializers.ModelSerializer):
         coupon.date = get_current_date()
         coupon.save()
 
-        return self.Meta.model.objects.create(**validated_data)
+        return order
 
 
