@@ -33,6 +33,9 @@ class CouponTypeSerializer(ModelSerializer):
         if start_date > end_date:
             raise ValidationError("ERROR: 유효 기간이 올바르지 않습니다.")
 
+        if get_current_date() > end_date.strftime('%Y-%m-%d %H:%M:%S'):
+            raise ValidationError("ERROR: 유효 기간이 올바르지 않습니다.")
+
         if period < 0:
             raise ValidationError("ERROR: 유효 기한이 올바르지 않습니다.")
 
@@ -60,6 +63,7 @@ class CouponSerializer(ModelSerializer):
 
     def create(self, validated_data):
         coupon_type = validated_data.get('type', None)
+        owner = validated_data.get('user', None)
 
         if not coupon_type:
             raise ValidationError("ERROR: 올바르지 않은 입력값입니다.")
@@ -71,18 +75,13 @@ class CouponSerializer(ModelSerializer):
                 coupon_type_obj.end_date.strftime('%Y-%m-%d %H:%M:%S') >= get_current_date()):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
 
+        # 이미 발급 받은 경우
+        if Coupon.objects.filter(owner=owner, type=coupon_type):
+            raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
+
         # iss_type 1인 경우 사용자 발급
         if coupon_type_obj.iss_type == 1:
-            owner = self.request.user
             code = coupon_type_obj.code
-
-            # 이미 발급 받은 경우
-            if len(Coupon.objects.filter(
-                    owner=owner,
-                    code=code,
-                    type=coupon_type
-            )) >= 1:
-                raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
 
             # 해당 타입 쿠폰의 수량이 0인 경우(소진)
             if coupon_type_obj.amount <= 0:
@@ -92,13 +91,14 @@ class CouponSerializer(ModelSerializer):
             coupon_type_obj.save()
 
         else:
-            owner = validated_data.get('user', 1)
             code = code_generator(coupon_type)
 
         # 기간(period)이 있는 경우 현재 날짜에서 그만큼 더한 날짜를 만료 날짜로 지정
         # 없는 경우 쿠폰 타입의 end_date를 만료 날짜로 지정
-        expired_date = add_period(get_current_date(), coupon_type_obj.period)
-            # if coupon_type_obj.period else coupon_type_obj.end_date
+        if coupon_type_obj.period:
+            expired_date = add_period(get_current_date(), coupon_type_obj.period)
+        else:
+            expired_date = coupon_type_obj.end_date
 
         return self.Meta.model.objects.create(
                 type=coupon_type,
