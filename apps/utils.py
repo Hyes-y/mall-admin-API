@@ -148,8 +148,11 @@ def get_delivery_cost(country, quantity):
     """
     try:
         country_name = country_code_data[country]['country_name']
+        delivery_cost = delivery_cost_data[country_name][str(quantity)]
     except KeyError:
         country_name = "USA"
 
-    delivery_cost = delivery_cost_data[country_name][str(quantity)]
+    finally:
+        delivery_cost = delivery_cost_data[country_name][str(quantity)]
+
     return delivery_cost
