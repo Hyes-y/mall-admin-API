@@ -1,4 +1,5 @@
-from rest_framework.serializers import ModelSerializer
+from django.db.models import Sum
+from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from rest_framework.serializers import ValidationError
 from .models import Coupon, CouponType
 from apps.utils import code_generator, get_current_date, add_period
@@ -62,7 +63,7 @@ class CouponSerializer(ModelSerializer):
 
         # 쿠폰 타입이 유효하지 않음 (비활성화 되어있거나 유효 기간이 지난 경우)
         if not (coupon_type_obj.is_active and
-                coupon_type_obj.end_date.strftime('%Y-%m-%d') >= get_current_date()):
+                coupon_type_obj.end_date.strftime('%Y-%m-%d %H:%M:%S') >= get_current_date()):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
 
         # iss_type 1인 경우 사용자 발급
@@ -70,12 +71,20 @@ class CouponSerializer(ModelSerializer):
             owner = self.request.user
             code = coupon_type_obj.code
 
+            # 이미 발급 받은 경우
             if len(Coupon.objects.filter(
                     owner=owner,
                     code=code,
                     type=coupon_type
             )) >= 1:
                 raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
+
+            # 해당 타입 쿠폰의 수량이 0인 경우(소진)
+            if coupon_type_obj.amount <= 0:
+                raise ValidationError("ERROR: 해당 쿠폰이 소진되었습니다.")
+
+            coupon_type_obj.amount -= 1
+            coupon_type_obj.save()
 
         else:
             owner = validated_data.get('user', 1)
@@ -89,3 +98,24 @@ class CouponSerializer(ModelSerializer):
                 owner=owner,
                 code=code,
             )
+
+
+class CouponStatisticsSerializer(ModelSerializer):
+    coupons = CouponSerializer(many=True, read_only=True)
+    total_sale = SerializerMethodField()
+    use_counts = SerializerMethodField()
+    issue_counts = SerializerMethodField()
+
+    class Meta:
+        model = CouponType
+        fields = ('id', 'description', 'coupons', 'total_sale', 'use_counts', 'issue_counts')
+
+    def get_total_sale(self, obj):
+        total_sale = Coupon.objects.filter(type=obj.id, is_used=True).aggregate(Sum('sale_amount'))
+        return total_sale['sale_amount__sum']
+
+    def get_use_counts(self, obj):
+        return Coupon.objects.filter(type=obj.id, is_used=True).count()
+
+    def get_issue_counts(self, obj):
+        return Coupon.objects.filter(type=obj.id).count()
