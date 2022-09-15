@@ -70,12 +70,20 @@ class CouponSerializer(ModelSerializer):
             owner = self.request.user
             code = coupon_type_obj.code
 
+            # 이미 발급 받은 경우
             if len(Coupon.objects.filter(
                     owner=owner,
                     code=code,
                     type=coupon_type
             )) >= 1:
                 raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
+
+            # 해당 타입 쿠폰의 수량이 0인 경우(소진)
+            if coupon_type_obj.amount <= 0:
+                raise ValidationError("ERROR: 해당 쿠폰이 소진되었습니다.")
+
+            coupon_type_obj.amount -= 1
+            coupon_type_obj.save()
 
         else:
             owner = validated_data.get('user', 1)
