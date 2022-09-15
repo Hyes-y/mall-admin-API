@@ -63,7 +63,8 @@ class CouponSerializer(ModelSerializer):
 
     def create(self, validated_data):
         coupon_type = validated_data.get('type', None)
-        owner = validated_data.get('user', None)
+        owner = validated_data.get('owner', None)
+        print("owner:", owner)
 
         if not coupon_type:
             raise ValidationError("ERROR: 올바르지 않은 입력값입니다.")
@@ -76,7 +77,7 @@ class CouponSerializer(ModelSerializer):
             raise ValidationError("ERROR: 유효하지 않은 쿠폰 타입입니다.")
 
         # 이미 발급 받은 경우
-        if Coupon.objects.filter(owner=owner, type=coupon_type):
+        if len(Coupon.objects.filter(owner=owner, type=coupon_type_obj)) != 0:
             raise ValidationError("ERROR: 이미 발급받은 쿠폰입니다.")
 
         # iss_type 1인 경우 사용자 발급
