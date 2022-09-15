@@ -36,7 +36,7 @@ class Coupon(models.Model):
     """
     쿠폰 모델
     """
-    type = models.ForeignKey(CouponType, on_delete=models.DO_NOTHING, db_column='type')
+    type = models.ForeignKey(CouponType, on_delete=models.DO_NOTHING, db_column='type', related_name='coupons')
     issue_date = models.DateTimeField(verbose_name='발급 날짜', auto_now_add=True)
     expired_date = models.DateTimeField(verbose_name='만료 날짜')
     is_used = models.BooleanField(verbose_name='사용 여부', default=False)
