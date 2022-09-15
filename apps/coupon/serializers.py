@@ -101,21 +101,32 @@ class CouponSerializer(ModelSerializer):
 
 
 class CouponStatisticsSerializer(ModelSerializer):
+    """
+    쿠폰 타입별 사용 내역 시리얼라이저
+    쿠폰 타입별 발급된 쿠폰 내역과, 총 할인 금액, 사용 횟수, 발급 횟수 조회 가능
+    coupons: 해당 쿠폰 타입인 쿠폰
+    total_sale: 사용한 쿠폰의 총 할인액 (원화기준)
+    use_counts: 쿠폰 사용 횟수
+    issue_counts: 쿠폰 발행 횟수
+    """
     coupons = CouponSerializer(many=True, read_only=True)
     total_sale = SerializerMethodField()
-    use_counts = SerializerMethodField()
-    issue_counts = SerializerMethodField()
+    use_count = SerializerMethodField()
+    issue_count = SerializerMethodField()
 
     class Meta:
         model = CouponType
-        fields = ('id', 'description', 'coupons', 'total_sale', 'use_counts', 'issue_counts')
+        fields = ('id', 'description', 'coupons', 'total_sale', 'use_count', 'issue_count')
 
     def get_total_sale(self, obj):
+        """ 쿠폰 총 할인액(타입별) """
         total_sale = Coupon.objects.filter(type=obj.id, is_used=True).aggregate(Sum('sale_amount'))
         return total_sale['sale_amount__sum']
 
-    def get_use_counts(self, obj):
+    def get_use_count(self, obj):
+        """ 쿠폰 총 사용 횟수 """
         return Coupon.objects.filter(type=obj.id, is_used=True).count()
 
-    def get_issue_counts(self, obj):
+    def get_issue_count(self, obj):
+        """ 쿠폰 총 발급 횟수 """
         return Coupon.objects.filter(type=obj.id).count()
