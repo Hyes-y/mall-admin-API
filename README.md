@@ -165,7 +165,9 @@ ERD
 
 ## API 목록
 API 명세 주소
-- 작성 후 추가 예정
+
+[POSTMAN API Document](https://documenter.getpostman.com/view/19274775/2s7YfHix7q)
+
 <br>
 
 
