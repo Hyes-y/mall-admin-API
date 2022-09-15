@@ -64,7 +64,6 @@ class CouponSerializer(ModelSerializer):
     def create(self, validated_data):
         coupon_type = validated_data.get('type', None)
         owner = validated_data.get('owner', None)
-        print("owner:", owner)
 
         if not coupon_type:
             raise ValidationError("ERROR: 올바르지 않은 입력값입니다.")
