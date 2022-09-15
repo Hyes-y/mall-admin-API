@@ -125,14 +125,15 @@ class OrderTestSerializer(serializers.ModelSerializer):
         sale_price = payment_amount - dc_amount
         payment_amount = sale_price + delivery_cost
 
-        validated_data['delivery_cost'] = delivery_cost * exchange_rate
-        validated_data['sale_price'] = sale_price * exchange_rate
-        validated_data['payment_amount'] = payment_amount * exchange_rate
+        validated_data['delivery_cost'] = delivery_cost / exchange_rate
+        validated_data['sale_price'] = sale_price / exchange_rate
+        validated_data['payment_amount'] = payment_amount / exchange_rate
 
+        print(sale_price)
         try:
             order = self.Meta.model.objects.create(**validated_data)
         except:
-            raise ValidationError("ERROR: 유효하지 않은 주문입니다.")
+            raise ValidationError("ERROR: 주문이 정상적으로 등록되지 않았습니다.")
 
         # 쿠폰 사용 처리
         coupon.is_used = True

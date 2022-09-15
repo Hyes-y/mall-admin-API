@@ -45,10 +45,10 @@ def add_period(issue_date, period):
     """
     날짜 더하기 함수
     input: issue_date, period(day)
-    return: str(YYYY-mm-dd)
+    return: str(YYYY-mm-dd HH:MM:SS)
     """
-    expired_date = datetime.strptime(issue_date, '%Y-%m-%d') + timedelta(days=period)
-    return expired_date.strftime('%Y-%m-%d')
+    expired_date = datetime.strptime(issue_date, '%Y-%m-%d %H:%M:%S') + timedelta(days=period)
+    return expired_date.strftime('%Y-%m-%d %H:%M:%S')
 
 
 def exchange_currency(amount, currency='krw'):
@@ -108,7 +108,7 @@ def get_exchange_rate(date=None):
                              'apps',
                              'data',
                              'exchange_rate',
-                             f'{get_current_date()}.json')
+                             f'{get_current_date()[:10]}.json')
 
     # 오늘 환율이 이미 저장된 경우
     if os.path.exists(file_path):
