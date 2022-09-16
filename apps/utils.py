@@ -51,51 +51,6 @@ def add_period(issue_date, period):
     return expired_date.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def exchange_currency(amount, currency='krw'):
-    """
-    원 - 달러 변환 함수
-    현재 일자 환율 정보를 이용하여 원 - 달러 변환
-    amount: 금액
-    currency: 변환하고자 하는 통화 코드('krw', 'usd')
-
-    input: amount(decimal), currency(str, default='krw')
-    return: Decimal
-    """
-    file_path = os.path.join(settings.BASE_DIR,
-                             'apps',
-                             'data',
-                             'exchange_rate',
-                             f'{get_current_date()}.json')
-
-    # 오늘 환율이 이미 저장된 경우
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            file = json.load(f)
-            return amount / Decimal(file['USD']) if currency == 'usd' else amount * Decimal(file['USD'])
-    # 오늘 환율이 저장되어 있지 않은 경우
-    else:
-        url = 'https://www.koreaexim.go.kr/site/program/financial'
-        api = '/exchangeJSON'
-        params = {
-            'authkey': settings.ER_API_KEY,
-            'data': 'AP01',
-        }
-        response = requests.get(f'{url}{api}', params=params).json()
-
-        for res in response:
-            # cur_unit : 통화코드
-            # deal_bas_r : 매매기준율(환율)
-            if res['cur_unit'] == "USD":
-                # 천 단위 구분 기호(,) 제거
-                exchange_rate = res['deal_bas_r'].replace(",", "")
-                data = {
-                    'USD': exchange_rate
-                }
-                with open(file_path, 'w') as wf:
-                    json.dump(data, wf)
-                return amount / Decimal(data['USD']) if currency == 'usd' else amount * Decimal(data['USD'])
-
-
 def get_exchange_rate(date=None):
     """
     원 - 달러 환율 반환 함수
@@ -123,20 +78,24 @@ def get_exchange_rate(date=None):
             'authkey': settings.ER_API_KEY,
             'data': 'AP01',
         }
-        response = requests.get(f'{url}{api}', params=params).json()
-
-        for res in response:
-            # cur_unit : 통화코드
-            # deal_bas_r : 매매기준율(환율)
-            if res['cur_unit'] == "USD":
-                # 천 단위 구분 기호(,) 제거
-                exchange_rate = res['deal_bas_r'].replace(",", "")
-                data = {
-                    'USD': exchange_rate
-                }
-                with open(file_path, 'w') as wf:
-                    json.dump(data, wf)
-                return Decimal(data['USD'])
+        try:
+            response = requests.get(f'{url}{api}', params=params).json()
+    
+            for res in response:
+                # cur_unit : 통화코드
+                # deal_bas_r : 매매기준율(환율)
+                if res['cur_unit'] == "USD":
+                    # 천 단위 구분 기호(,) 제거
+                    exchange_rate = res['deal_bas_r'].replace(",", "")
+                    data = {
+                        'USD': exchange_rate
+                    }
+                    with open(file_path, 'w') as wf:
+                        json.dump(data, wf)
+                    return Decimal(data['USD'])
+        # API 오류의 경우 1200으로 디폴트 지정
+        except requests.exceptions.JSONDecodeError:
+            return Decimal('1200')
 
 
 def get_delivery_cost(country, quantity):
